@@ -13,28 +13,40 @@ let socket = new WebSocket('ws://localhost:8080/')
 // отправка нового сообщения на сервер
 document.forms.publish.onsubmit = function() {
   let outgoingMessage = this.message.value
-  socket.send(outgoingMessage)
+  socket.send(JSON.stringify({ type: 'post_message', data: outgoingMessage }))
   this.message.value = ""
   return false
 };
 
 // получение входящих сообщений
 socket.onmessage = async function(event) {
-  // если приходит в виде blob, а не строки
-  //let message = await event.data.text()
-  
-  // если приходит в виде строки
-  let message = event.data
-
-  showMessage(message)
-  console.log(event)
+  try {
+    console.log('event from wsServer: ', event)
+    
+    // если приходит в виде blob, а не строки
+    // await event.data.text()
+    // ...
+    
+    // если приходит в виде строки
+    let { type, data } = JSON.parse(event.data)
+    
+    if (type == "get_message") {
+      showMessage(data)
+    } else if (type == "error") {
+      alert(`Error: ${data}`)
+    } else {
+      throw "unexpected event type"
+    }
+  } catch (e) {
+    console.log('error on socket.onmessage: ', e)
+  }
 };
 
 socket.onclose = (event) => {
   const message = `Connection closed, code ${event.code}`
+  showMessage(message)
   console.log(message)
   console.log(event)
-  showMessage(message)
 }
 
 // отображение информации в div#messages

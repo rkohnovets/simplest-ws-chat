@@ -25,46 +25,66 @@ server.on('upgrade', (request, socket, head) => {
 });
 
 wsServer.on('connection', (ws, req) => {
-    log("New connection")
+  // если нужны какие-то заголовки из http запроса, 
+  // который инициировал подключение через протокол ws
+  //console.log(`connection request headers`, req.headers)
 
-    // присваиваем идентификатор пользователю
-    ws.Id = randomInt(1000)
+  // присваиваем идентификатор пользователю
+  ws.Id = randomInt(1000)
+  
+  log(`${ws.Id} connected`)
+  broadcastMessage(`${ws.Id} connected`)
 
-    // если нужны какие-то заголовки из http запроса, 
-    // который инициировал подключение через протокол ws
-    //console.log(`connection request headers`, req.headers)
-    
-    broadcastMessage(`${ws.Id} connected`)
-
-    ws.on('message', async (message) => {
-      // максимальная длина сообщения 50
-      message = String(message.slice(0, 50))
+  ws.on('message', async (dataStr) => {
+    try {
+      var { type, data } = JSON.parse(dataStr)
       
-      log(`Received message: ${message} from ${ws.Id}`)
+      if (type != "post_message") {
+        ws.send(JSON.stringify({ type: "error", data: "not message" }))
+        return
+      }
+
+      let message = data
+
+      if (message.length == 0) {
+        ws.send(JSON.stringify({ type: "error", data: "empty message" }))
+        return
+      }
+
+      log(`Received message: '${message}' from user ${ws.Id}`)
 
       message = `${ws.Id} sent message: ` + message
 
       broadcastMessage(message);
-    });
+    } catch (e) {
+      log(`error on ws.on('message', handler): `, e)
+      try {
+        ws.send(JSON.stringify({ type: "error", data: "unexpected error on server" }))
+      } catch {
 
-		ws.on('close', function (code, reason) {
-			log(`Connection closed, code ${code}`)
+      }
+    }
+  });
 
-      // часто, а мб и всегда, просто пустая строка
-      log(`Reason: `, reason.toString())
+  ws.on('close', function (code, reason) {
+    log(`Connection closed, code ${code}`)
 
-      broadcastMessage(`${ws.Id} disconnected`)
-		});
-	
-		ws.on('error', function (error) {
-			log(`WebSocket error: ${error.message}`);
-		});
+    // часто, а мб и всегда, просто пустая строка
+    log(`Reason: `, reason.toString())
+
+    broadcastMessage(`${ws.Id} disconnected`)
+  });
+
+  ws.on('error', function (error) {
+    log(`WebSocket error: ${error.message}`);
+  });
 });
 
 let broadcastMessage = (message) => {
   wsServer.clients.forEach((ws) => {
     if (ws.readyState === WebSocket.OPEN) {
-      ws.send(message);
+      //ws.send(message);
+      ws.send(JSON.stringify({ type: "get_message", data: String(message) }))
     }
   });
 }
