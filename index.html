@@ -1,0 +1,46 @@
+<!doctype html>
+
+<form name="publish">
+  <input type="text" name="message" maxlength="50" autocomplete="off"/>
+  <input type="submit" value="Send"/>
+</form>
+
+<div id="messages"></div>
+
+<script>
+let socket = new WebSocket('ws://localhost:8080/')
+
+// отправка нового сообщения на сервер
+document.forms.publish.onsubmit = function() {
+  let outgoingMessage = this.message.value
+  socket.send(outgoingMessage)
+  this.message.value = ""
+  return false
+};
+
+// получение входящих сообщений
+socket.onmessage = async function(event) {
+  // если приходит в виде blob, а не строки
+  //let message = await event.data.text()
+  
+  // если приходит в виде строки
+  let message = event.data
+
+  showMessage(message)
+  console.log(event)
+};
+
+socket.onclose = (event) => {
+  const message = `Connection closed, code ${event.code}`
+  console.log(message)
+  console.log(event)
+  showMessage(message)
+}
+
+// отображение информации в div#messages
+function showMessage(message) {
+  let messageElem = document.createElement('div')
+  messageElem.textContent = message
+  document.getElementById('messages').prepend(messageElem)
+}
+</script>
