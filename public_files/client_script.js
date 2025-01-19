@@ -1,21 +1,17 @@
-<!doctype html>
-
-<form name="publish">
-  <input type="text" name="message" maxlength="50" autocomplete="off"/>
-  <input type="submit" value="Send"/>
-</form>
-
-<div id="messages"></div>
-
-<script>
 let socket = new WebSocket('ws://localhost:8080/')
 
 // отправка нового сообщения на сервер
-document.forms.publish.onsubmit = function() {
-  let outgoingMessage = this.message.value
-  socket.send(JSON.stringify({ type: 'post_message', data: outgoingMessage }))
-  this.message.value = ""
-  return false
+document.getElementById('send-button').onclick = function() {
+  const messageInput = document.getElementById('message-input')
+  const message = messageInput.value
+
+  const jsonStr = JSON.stringify({ 
+    type: 'post_message', 
+    data: message 
+  })
+  socket.send(jsonStr)
+
+  messageInput.value = ""
 };
 
 // получение входящих сообщений
@@ -38,10 +34,11 @@ socket.onmessage = async function(event) {
       throw "unexpected event type"
     }
   } catch (e) {
-    console.log('error on socket.onmessage: ', e)
+    console.error('error on socket.onmessage: ', e)
   }
 };
 
+// обработка закрытия соединения
 socket.onclose = (event) => {
   const message = `Connection closed, code ${event.code}`
   showMessage(message)
@@ -49,10 +46,9 @@ socket.onclose = (event) => {
   console.log(event)
 }
 
-// отображение информации в div#messages
+// отображение информации (сообщений)
 function showMessage(message) {
   let messageElem = document.createElement('div')
   messageElem.textContent = message
-  document.getElementById('messages').prepend(messageElem)
+  document.getElementById('messages-container').prepend(messageElem)
 }
-</script>

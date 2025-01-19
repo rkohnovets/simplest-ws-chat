@@ -1,0 +1,31 @@
+<!doctype html>
+<head>
+  <title>simplest-ws-chat</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background-color: aquamarine;
+      display: flex;
+      justify-content: center;
+    }
+    #container {
+      width: 500px;
+      background-color: blanchedalmond;
+      padding: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+    <div>
+      <input id="message-input" type="text" maxlength="50" autocomplete="off"/>
+      <button id="send-button">Send</button>
+    </div>
+    
+    <div id="messages-container"></div>
+  </div>
+
+  <script src="client_script.js"></script>
+</body>
