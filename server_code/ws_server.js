@@ -1,60 +1,12 @@
 const { randomInt } = require('crypto')
-const fs = require('fs')
-const path = require('path')
-
-const express = require('express')
 const WebSocket = require('ws')
 
 let log = console.log;
 
-const app = express();
-const port = 8080;
+const wsPort = 8081;
+const wsServer = new WebSocket.Server({ port: wsPort })
 
-// раздача файлов приложения
-const filesToHost = [
-  {
-    url: '/',
-    filepath: './public_files/index.html'
-  },
-  {
-    url: '/client_script.js',
-    filepath: './public_files/client_script.js'
-  },
-]
-for (let obj of filesToHost) {
-  app.get(obj.url, async (req, res) => {
-    // устанавливаем заголовок с типом передаваемых данных
-    const ext = path.extname(obj.filepath);
-    const mimeType = {
-      '.html': 'text/html',
-      '.js': 'application/javascript',
-      '.css': 'text/css',
-    }[ext];
-    res.setHeader('Content-Type', mimeType);
-    // передаём сам файл
-    fs.createReadStream(obj.filepath).pipe(res)
-  });
-}
-
-// http сервер, раздающий файлы 
-// и принимающий запросы на переход на WebSocket
-const server = app.listen(port, () => {
-	log(`Server is started on http://localhost:${port}`)
-});
-
-const wsServer = new WebSocket.Server({ noServer: true })
-
-server.on('upgrade', (request, socket, head) => {
-	wsServer.handleUpgrade(request, socket, head, (ws) => {
-		wsServer.emit('connection', ws, request)
-	});
-});
-
-wsServer.on('connection', (client_ws, req) => {
-  // если нужны какие-то заголовки из http запроса, 
-  // который инициировал подключение через протокол ws
-  //console.log(`connection request headers`, req.headers)
-
+wsServer.on('connection', (client_ws) => {
   // присваиваем идентификатор пользователю
   client_ws.Id = randomInt(1000)
   
@@ -104,17 +56,17 @@ wsServer.on('connection', (client_ws, req) => {
 });
 
 const broadcastMessage = (message, type = 'get_message', exceptUserId = null) => {
-  wsServer.clients.forEach((ws) => {
-    if (exceptUserId && ws.Id == exceptUserId)
+  wsServer.clients.forEach((client_ws) => {
+    if (exceptUserId && client_ws.Id == exceptUserId)
       return
-    if (ws.readyState !== WebSocket.OPEN)
+    if (client_ws.readyState !== WebSocket.OPEN)
       return
 
     const jsonStr = JSON.stringify({ 
       type: type, 
       data: String(message) 
     })
-    ws.send(jsonStr)
+    client_ws.send(jsonStr)
   });
 }
 

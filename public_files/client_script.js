@@ -1,4 +1,4 @@
-let socket = new WebSocket('ws://localhost:8080/')
+let socket = new WebSocket('ws://localhost:8081/')
 
 // отправка нового сообщения на сервер
 document.getElementById('send-button').onclick = function() {
