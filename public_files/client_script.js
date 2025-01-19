@@ -19,13 +19,8 @@ socket.onmessage = async function(event) {
   try {
     console.log('event from wsServer: ', event)
     
-    // если приходит в виде blob, а не строки
-    // await event.data.text()
-    // ...
-    
-    // если приходит в виде строки
     let { type, data } = JSON.parse(event.data)
-    
+
     if (type == "get_message") {
       showMessage(data)
     } else if (type == "error") {
