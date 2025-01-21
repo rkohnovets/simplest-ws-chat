@@ -12,26 +12,31 @@ document.getElementById('send-button').onclick = function() {
   socket.send(jsonStr)
 
   messageInput.value = ""
-};
+}
 
 // получение входящих сообщений
 socket.onmessage = async function(event) {
   try {
     console.log('event from wsServer: ', event)
     
-    let { type, data } = JSON.parse(event.data)
+    const obj = JSON.parse(event.data)
+    const { type, data } = obj
 
-    if (type == "get_message") {
-      showMessage(data)
-    } else if (type == "error") {
-      alert(`Error: ${data}`)
-    } else {
-      throw "unexpected event type"
+    switch (type) {
+      case "get_message":
+        showMessage(data)
+        break
+      case 'error':
+        console.log(`received message of 'error' type: ${data}`)
+        break
+      default:
+        console.error('unexpected event type')
     }
+
   } catch (e) {
     console.error('error on socket.onmessage: ', e)
   }
-};
+}
 
 // обработка закрытия соединения
 socket.onclose = (event) => {
@@ -43,7 +48,9 @@ socket.onclose = (event) => {
 
 // отображение информации (сообщений)
 function showMessage(message) {
-  let messageElem = document.createElement('div')
-  messageElem.textContent = message
-  document.getElementById('messages-container').prepend(messageElem)
+  let divElem = document.createElement('div')
+  divElem.textContent = message
+  
+  document.getElementById('messages-container')
+    .prepend(divElem)
 }

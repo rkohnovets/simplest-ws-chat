@@ -2,60 +2,60 @@ const { randomInt } = require('crypto')
 const WebSocket = require('ws')
 
 let log = console.log;
-
 const wsPort = 8081;
 const wsServer = new WebSocket.Server({ port: wsPort })
+log(`ws server is started on ws://localhost:${wsPort}`)
 
 wsServer.on('connection', (client_ws) => {
   // присваиваем идентификатор пользователю
   client_ws.Id = randomInt(1000)
   
-  log(`user ${client_ws.Id} connected`)
-  broadcastMessage(`user ${client_ws.Id} connected`)
+  const message = `user ${client_ws.Id} connected`
+  broadcastMessage(message, 'get_message', client_ws.Id)
+  log(message)
+  
+  const sendErrorMessage = (message) => {
+    client_ws.send(JSON.stringify({ type: "error", data: message}))
+  }
 
   const handlePostMessage = (message) => {
     if (message.length == 0) {
-      client_ws.send(JSON.stringify({ type: "error", data: "empty message" }))
+      sendErrorMessage("empty message")
       return
     }
-    log(`Received message: '${message}' from user ${client_ws.Id}`)
     broadcastMessage(`${client_ws.Id} sent message: ${message}`);
   }
-
+  
   client_ws.on('message', async (dataStr) => {
     try {
-      var { type, data } = JSON.parse(dataStr)
-
+      log(`Received message: '${dataStr}' from user ${client_ws.Id}`)
+      const obj = JSON.parse(dataStr)
+      const { type, data } = obj
+      
       switch(type) {
         case 'post_message':
           handlePostMessage(data)
           break
         default:
-          client_ws.send(JSON.stringify({ type: "error", data: "message type not recognized" }))
+          sendErrorMessage("message type not recognized")
       }
     } catch (e) {
       log(`error handling ws 'message' event`, e)
-      try {
-        client_ws.send(JSON.stringify({ type: "error", data: "unexpected error on server" }))
-      } catch {}
+      sendErrorMessage("unexpected error on server")
     }
   });
 
-  client_ws.on('close', function (code, reason) {
+  client_ws.on('close', function (code) {
     log(`Connection closed, code ${code}`)
-
-    // часто, а мб и всегда, просто пустая строка
-    log(`Reason: `, reason.toString())
-
     broadcastMessage(`${client_ws.Id} disconnected`)
   });
 
   client_ws.on('error', function (error) {
-    log(`WebSocket error: ${error.message}`);
+    log(`WebSocket error: ${error?.message ?? error}`);
   });
 });
 
-const broadcastMessage = (message, type = 'get_message', exceptUserId = null) => {
+const broadcastMessage = (stringData, type = 'get_message', exceptUserId = null) => {
   wsServer.clients.forEach((client_ws) => {
     if (exceptUserId && client_ws.Id == exceptUserId)
       return
@@ -64,16 +64,15 @@ const broadcastMessage = (message, type = 'get_message', exceptUserId = null) =>
 
     const jsonStr = JSON.stringify({ 
       type: type, 
-      data: String(message) 
+      data: stringData
     })
     client_ws.send(jsonStr)
   });
 }
 
-wsServer.on('close', function() {
-  clearInterval(interval);
-});
-
 wsServer.on('error', function(error) {
   log(`WebSocket server error: ${error.message}`);
+});
+
+wsServer.on('close', function() {
 });
